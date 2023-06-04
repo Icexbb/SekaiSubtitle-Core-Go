@@ -1,1 +1,1 @@
-go build -o .\release\core-windows-amd64.bin
+go build -o ./release/core-windows-amd64.bin
