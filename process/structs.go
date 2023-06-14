@@ -84,13 +84,11 @@ func (a AssDraw) move(x, y int) AssDraw {
 			step.move(x, y)
 			newProto += step.string()
 			i += 2
-			break
 		case "l":
 			var step = Line{point: Point2D{x: Str2int(sArr[i+1]), y: Str2int(sArr[i+2])}}
 			step.move(x, y)
 			newProto += step.string()
 			i += 2
-			break
 		case "b":
 			var step = Bezier{points: [3]Point2D{
 				{x: Str2int(sArr[i+1]), y: Str2int(sArr[i+2])},
@@ -100,7 +98,6 @@ func (a AssDraw) move(x, y int) AssDraw {
 			step.move(x, y)
 			newProto += step.string()
 			i += 6
-			break
 		}
 
 	}
@@ -116,13 +113,11 @@ func (a AssDraw) scale(ratio float64) AssDraw {
 			step.scale(ratio)
 			newProto += step.string()
 			i += 2
-			break
 		case "l":
 			var step = Line{point: Point2D{x: Str2int(sArr[i+1]), y: Str2int(sArr[i+2])}}
 			step.scale(ratio)
 			newProto += step.string()
 			i += 2
-			break
 		case "b":
 			var step = Bezier{points: [3]Point2D{
 				{x: Str2int(sArr[i+1]), y: Str2int(sArr[i+2])},
@@ -132,7 +127,6 @@ func (a AssDraw) scale(ratio float64) AssDraw {
 			step.scale(ratio)
 			newProto += step.string()
 			i += 6
-			break
 		}
 	}
 	return AssDraw{proto: newProto}

@@ -7,7 +7,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"image"
-	"math"
 	"os"
 	"reflect"
 	"strconv"
@@ -45,8 +44,8 @@ func SplitArr[T any](s []T) ([]T, []T) {
 	}
 	return odd, even
 }
-func MaxInt(arr []int) int {
-	max := math.MinInt
+func MaxInt[T int64 | int32 | int](arr []T) T {
+	max := arr[0]
 	for _, v := range arr {
 		if v > max {
 			max = v
@@ -54,8 +53,8 @@ func MaxInt(arr []int) int {
 	}
 	return max
 }
-func MinInt(arr []int) int {
-	min := math.MaxInt
+func MinInt[T int64 | int32 | int](arr []T) T {
+	min := arr[0]
 	for _, v := range arr {
 		if v < min {
 			min = v
@@ -63,12 +62,28 @@ func MinInt(arr []int) int {
 	}
 	return min
 }
+func Variance[T int64 | int32 | int | float64 | float32](v []T) float64 {
+	var res float64 = 0
+	var m = Mean(v)
+	var n int = len(v)
+	for i := 0; i < n; i++ {
+		res += (float64(v[i]) - m) * (float64(v[i]) - m)
+	}
+	return res / float64(n-1)
+}
 func Prod[T int64 | int32 | int | float64 | float32](arr []T) T {
 	result := T(1)
 	for _, v := range arr {
 		result *= v
 	}
 	return result
+}
+func Mean[T int64 | int32 | int | float64 | float32](arr []T) float64 {
+	var result = T(0)
+	for _, v := range arr {
+		result += v
+	}
+	return float64(result) / float64(len(arr))
 }
 func CheckErr(err error) {
 	if err != nil {

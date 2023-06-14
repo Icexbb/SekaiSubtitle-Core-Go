@@ -71,8 +71,7 @@ func ReadText(file string) TranslateData {
 	var Dialogs []DialogTranslate
 	var Banners []BannerTranslate
 	for _, v := range data {
-		var res []string
-		res = DialogReg.FindStringSubmatch(v)
+		var res = DialogReg.FindStringSubmatch(v)
 		if len(res) != 0 {
 			r := DialogTranslate{Chara: res[1], Body: res[2]}
 			Dialogs = append(Dialogs, r)

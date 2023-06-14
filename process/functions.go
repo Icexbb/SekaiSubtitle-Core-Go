@@ -55,6 +55,9 @@ func getResizedAreaEdge(h, w int) gocv.Mat {
 	gocv.Resize(resized, &resized, image.Point{X: bannerPatternSize, Y: bannerPatternSize}, 0, 0, gocv.InterpolationNearestNeighbor)
 	return resized
 }
+func ExportGetResizedAreaEdge(h, w int) gocv.Mat {
+	return getResizedAreaEdge(h, w)
+}
 
 type areaMaskInfo struct {
 	size  [2]int
@@ -134,9 +137,12 @@ func getBannerArea(h, w int) [4]int {
 		}
 	}
 	var res = [4]int{
-		MinInt(xls), MaxInt(xls), MinInt(yls), MaxInt(yls),
+		MinInt(yls), MaxInt(yls), MinInt(xls), MaxInt(xls),
 	}
 	return res
+}
+func ExportGetBannerArea(h, w int) [4]int {
+	return getBannerArea(h, w)
 }
 
 func checkDark(image gocv.Mat, color int) uint8 {
@@ -236,66 +242,31 @@ func checkFrameAreaTagPosition(frame, tag gocv.Mat) image.Point {
 	}
 
 }
-func checkFrameAreaBannerEdge(frame, template gocv.Mat, area [4]int) bool {
-	var result bool
-	var cut gocv.Mat
-	var c uint8 = 142
-	height := int(math.Abs(float64(area[1] - area[0])))
-	cut = frame.Region(image.Rect(
-		int(float64(area[0])-0.1*float64(height)),
-		int(float64(area[2])-0.1*float64(height)),
-		int(float64(area[1])+0.1*float64(height)),
-		int(float64(area[3])+0.1*float64(height))))
-	sz := int(float64(cut.Cols()) * 0.3)
-	gocv.Resize(cut, &cut, image.Point{X: sz, Y: sz}, 0, 0, gocv.InterpolationNearestNeighbor)
-	x1, y1 := int(float64(sz)*0.3), int(float64(sz)*0.2)
-	x2, y2 := int(float64(sz)*0.7), int(float64(sz)*0.8)
 
-	for x := x1; x < x2; x++ {
-		for y := y1; y < y2; y++ {
-			cut.SetUCharAt(x, y, c)
+func checkFrameAreaBannerEdge(frame, templateCanny, templateReverse gocv.Mat, area [4]int) bool {
+	var mat gocv.Mat
+	height := int(math.Abs(float64(area[1] - area[0])))
+	var cutArea = image.Rect(
+		int(float64(area[2])-0.1*float64(height)), int(float64(area[0])-0.1*float64(height)),
+		int(float64(area[3])+0.1*float64(height)), int(float64(area[1])+0.1*float64(height)),
+	)
+	mat = frame.Region(cutArea)
+
+	gocv.Resize(mat, &mat, image.Point{X: height, Y: height}, 0, 0, gocv.InterpolationLanczos4)
+	sp, ep := int(float64(height)*0.2), int(float64(height)*0.8)
+	for x := sp; x < ep; x++ {
+		for y := sp; y < ep; y++ {
+			mat.SetUCharAt(x, y, 150)
 		}
 	}
-	var tempCanny = gocv.NewMat()
-	gocv.Canny(template, &tempCanny, 100, 200)
-	for x := 0; x < tempCanny.Cols(); x++ {
-		for y := 0; y < tempCanny.Rows(); y++ {
-			tempCanny.SetUCharAt(x, y, uint8(255)-tempCanny.GetUCharAt(x, y))
-		}
-	}
-	if checkFrameAreaBannerEdgeProcess(cut, tempCanny, [2]float32{50, 150}) {
-		result = true
-	}
-	if !result {
-		if checkFrameAreaBannerEdgeProcess(cut, tempCanny, [2]float32{25, 25}) {
-			result = true
-		}
-	}
-	if !result {
-		if checkFrameAreaBannerEdgeProcess(cut, tempCanny, [2]float32{50, 50}) {
-			result = true
-		}
-	}
-	return result
-}
-func checkFrameAreaBannerEdgeProcess(cut, tempCanny gocv.Mat, thresholds [2]float32) bool {
-	var result []float64
-	var frameEdge = gocv.NewMat()
-	gocv.Canny(cut, &frameEdge, thresholds[0], thresholds[1])
-	result = append(result, math.Max(1-(frameEdge.Sum().Val1/tempCanny.Sum().Val1)*10.0, 0))
-	var temp float64
-	for x := 0; x < tempCanny.Cols(); x++ {
-		for y := 0; y < tempCanny.Rows(); y++ {
-			if tempCanny.GetUCharAt(x, y) == 255 {
-				temp += float64(frameEdge.GetUCharAt(x, y))
-			}
-		}
-	}
-	result = append(result, temp/tempCanny.Sum().Val1/0.3)
-	var tempM = gocv.NewMat()
-	gocv.MatchTemplate(frameEdge, tempCanny, &tempM, gocv.TmCcoeffNormed, gocv.NewMat())
-	result = append(result, tempM.GetDoubleAt(0, 0))
-	return Prod(result) > 0.35
+
+	canny := gocv.NewMat()
+	gocv.Canny(mat, &canny, 50, 150)
+
+	result := gocv.NewMat()
+	gocv.MatchTemplate(canny, templateCanny, &result, gocv.TmCcoeffNormed, templateReverse)
+
+	return result.GetFloatAt(0, 0) > 0.4
 }
 
 func getDialogMask(info patternSizeInfo, move [2]int) string {
