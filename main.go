@@ -1,20 +1,21 @@
 package main
 
 import (
-	"SekaiSubtitle-Core/process"
 	"encoding/json"
 	"flag"
 	"fmt"
-	"github.com/gorilla/mux"
-	"github.com/gorilla/websocket"
-	"gocv.io/x/gocv"
 	"log"
 	"net/http"
 	"os"
 	"sync"
+
+	"SekaiSubtitle-Core/process"
+	"github.com/gorilla/mux"
+	"github.com/gorilla/websocket"
+	"gocv.io/x/gocv"
 )
 
-var AppVersion = "v2.0.230614"
+var AppVersion = "v2.0.230714"
 var TaskList = make(map[string]*process.Task)
 var TaskListMux = new(sync.RWMutex)
 var upgrader = websocket.Upgrader{}
@@ -46,9 +47,9 @@ type WsConn struct {
 }
 
 func (c *WsConn) WriteMessage(msgType int, msgByte []byte) (err error) {
-	c.Mux.Lock() //加锁
+	c.Mux.Lock() // 加锁
 	err = c.Conn.WriteMessage(msgType, msgByte)
-	c.Mux.Unlock() //解锁
+	c.Mux.Unlock() // 解锁
 	return err
 }
 
@@ -91,7 +92,7 @@ func wsHandler(w http.ResponseWriter, r *http.Request) {
 			}
 			TaskListMux.Unlock()
 		}
-	}() //Send Log
+	}() // Send Log
 	go func() {
 		var taskStatusLast string
 		for {
@@ -123,7 +124,7 @@ func wsHandler(w http.ResponseWriter, r *http.Request) {
 				}
 			}
 		}
-	}() //Send Task Info
+	}() // Send Task Info
 	for {
 		_, msgBytes, err := conn.ReadMessage()
 		if err != nil {
@@ -318,21 +319,61 @@ func taskConfigHandler(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
+func serve(port int) {
+	log.Println("Sekai Subtitle Core Started")
+	log.Printf("Serve on localhost:%d", port)
+	router := mux.NewRouter()
+	router.HandleFunc("/", wsHandler)
+	router.HandleFunc("/video", videoInfoHandler)
+	router.HandleFunc("/task", taskConfigHandler)
+	log.Fatal(http.ListenAndServe(fmt.Sprintf("127.0.0.1:%d", port), router))
+}
+func test() {
+	var testConfig = process.TaskConfig{
+		VideoFile:     "E:\\Project Sekai\\test\\event_80_03.mp4",
+		JsonFile:      "E:\\Project Sekai\\test\\event_80_03.json",
+		TranslateFile: "",
+		OutputPath:    "E:\\Project Sekai\\test\\event_80_03.ass",
+		Overwrite:     true,
+		Font:          "",
+		VideoOnly:     false,
+		Staff:         nil,
+		TyperInterval: [2]int{50, 80},
+		Duration:      [2]int{0, 0},
+		Debug:         true,
+	}
+	var task = process.NewTask(testConfig)
+	go task.Run()
+
+	for {
+		select {
+		case logMsg := <-task.LogChan:
+			if logMsg.Type == "string" {
+				log.Printf("Task %s: %s\n", task.Id, logMsg.Data)
+				if logMsg.Data == "[Finish] Process Finished" {
+					os.Exit(0)
+				}
+			} else {
+				// log.Printf("Task %s: %s\n", task.Id, logMsg.Data)
+			}
+		default:
+			// PASS
+		}
+	}
+}
 func main() {
 	var printVersion bool
+	var testRun bool
 	var port int
 	flag.BoolVar(&printVersion, "v", false, "Print Core Version")
+	flag.BoolVar(&testRun, "t", false, "run test()")
 	flag.IntVar(&port, "p", 50000, "Select Core Port")
 	flag.Parse()
 	if printVersion {
 		fmt.Println(AppVersion)
+	} else if testRun {
+		test()
 	} else {
-		log.Println("Sekai Subtitle Core Started")
-		log.Printf("Serve on localhost:%d", port)
-		router := mux.NewRouter()
-		router.HandleFunc("/", wsHandler)
-		router.HandleFunc("/video", videoInfoHandler)
-		router.HandleFunc("/task", taskConfigHandler)
-		log.Fatal(http.ListenAndServe(fmt.Sprintf("127.0.0.1:%d", port), router))
+		serve(port)
 	}
 }

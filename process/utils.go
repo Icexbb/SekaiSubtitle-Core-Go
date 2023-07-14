@@ -65,7 +65,7 @@ func MinInt[T int64 | int32 | int](arr []T) T {
 func Variance[T int64 | int32 | int | float64 | float32](v []T) float64 {
 	var res float64 = 0
 	var m = Mean(v)
-	var n int = len(v)
+	var n = len(v)
 	for i := 0; i < n; i++ {
 		res += (float64(v[i]) - m) * (float64(v[i]) - m)
 	}

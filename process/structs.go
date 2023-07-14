@@ -186,7 +186,7 @@ type SubtitleStyleItem struct {
 
 func (s SubtitleStyleItem) string() string {
 	return fmt.Sprintf("Style:%s,%s,%d,%s,%s,%s,%s,%d,%d,%d,%d,%d,%d,%.1f,%d,%d,%.1f,%.1f,%d,%d,%d,%d,%d\n",
-		s.Name, s.FontName, int(s.Fontsize), s.PrimaryColour, s.SecondaryColour, s.OutlineColour, s.BackColour,
+		s.Name, s.FontName, s.Fontsize, s.PrimaryColour, s.SecondaryColour, s.OutlineColour, s.BackColour,
 		s.Bold, s.Italic, s.Underline, s.StrikeOut, s.ScaleX, s.ScaleY, s.Spacing, s.Angle, s.BorderStyle,
 		s.Outline, s.Shadow, s.Alignment, s.MarginL, s.MarginR, s.MarginV, s.Encoding,
 	)

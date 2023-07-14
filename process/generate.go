@@ -339,7 +339,7 @@ func dialogMakeEvent(
 			maskEvent.Text = "{\\fad(100,0)}" + maskEvent.Text
 			maskEvent.Start = MsToString(int(frameTime * float64(MaxInt([]int{0, startFrame.FrameId - 6}))))
 		}
-		//Character
+		// Character
 		charaMaskString := getDialogCharacterMask(h, w, pointCenterConst, pointSize)
 		charaMaskEvent := bodyEvent
 		charaMaskEvent.Text = charaMaskString
@@ -371,7 +371,7 @@ func dialogMakeEvent(
 				End:   MsToString(int(frameTime * float64(frame.FrameId+1))),
 				Style: styleName, Name: displayName, Text: frameBody,
 			}
-			//Mask
+			// Mask
 			maskMove := [2]int{frame.PointCenter.X - startFrame.PointCenter.X, frame.PointCenter.Y - startFrame.PointCenter.Y}
 			mask := getDialogMask(patternInfo, maskMove)
 			maskEvent := bodyEvent
@@ -379,7 +379,7 @@ func dialogMakeEvent(
 			maskEvent.Style = "screen"
 			maskEvent.Text = mask
 
-			//Character
+			// Character
 			charaMaskString := getDialogCharacterMask(h, w, frame.PointCenter, pointSize)
 
 			charaBodyEvent := bodyEvent
@@ -392,7 +392,7 @@ func dialogMakeEvent(
 			if config.VideoOnly {
 				charaBodyEvent.Type = "Comment"
 			}
-			//Character Mask
+			// Character Mask
 			charaMaskEvent := charaBodyEvent
 			charaMaskEvent.Text = getDialogCharacterMask(h, w, frame.PointCenter, pointSize)
 
@@ -464,12 +464,14 @@ func areaTagMakeEvent(tagInfo SpecialEffectDataItem, h, w int, frameTime float64
 	var maskEvents []SubtitleEventItem
 	var bodyEvents []SubtitleEventItem
 	body := tagInfo.StringVal
+	maskString, maskSize := getAreaTagMask(h, w)
+
 	for _, frame := range frames {
 		rightPosition := image.Point{X: frame.Position.X, Y: int(float64(frame.Position.Y) * 7 / 6)}
-		maskString, maskSize := getAreaTagMask(h, w, rightPosition)
+		ms := fmt.Sprintf("{\\pos(%d,%d)}%s", rightPosition.X+maskSize[1]/15, rightPosition.Y+maskSize[0]/2, maskString)
+
 		bodyPosition := fmt.Sprintf("{\\an7\\fs%d\\pos(%d,%d)}",
-			int(float64(maskSize[0])*0.85),
-			rightPosition.X-int(float64(maskSize[1])*19/20), rightPosition.Y-int(float64(maskSize[0])*0.4))
+			maskSize[0], rightPosition.X-(maskSize[1]*9/10), rightPosition.Y)
 		bodyEvent := SubtitleEventItem{
 			Type: "Dialogue", Style: "address", Layer: 2, Name: "",
 			Start:   MsToString(int(float64(frame.FrameId) * frameTime)),
@@ -482,7 +484,7 @@ func areaTagMakeEvent(tagInfo SpecialEffectDataItem, h, w int, frameTime float64
 		} else {
 			bodyEvents = append(bodyEvents, bodyEvent)
 			maskEvent := bodyEvent
-			maskEvent.Text = maskString
+			maskEvent.Text = ms
 			maskEvent.Layer = 1
 			maskEvents = append(maskEvents, maskEvent)
 		}
@@ -492,7 +494,7 @@ func areaTagMakeEvent(tagInfo SpecialEffectDataItem, h, w int, frameTime float64
 			Type: "Comment", Layer: 2, Style: "address", Name: "", MarginL: 0, MarginR: 0, MarginV: 0, Effect: "",
 			Start: bodyEvents[0].Start, End: bodyEvents[len(bodyEvents)-1].End, Text: body,
 		}
-		maskString, _ := getAreaTagMask(h, w, image.Point{})
+		maskString, _ := getAreaTagMask(h, w)
 		maskEvent := bodyEvent
 		maskEvent.Text = maskString
 		maskEvent.Layer = 1
@@ -576,39 +578,39 @@ func (t *Task) match() (
 			tData = TranslateData{}
 		}
 	}
-	var bannerData []SpecialEffectDataItem
-	var tagData []SpecialEffectDataItem
-	dialogData := sData.TalkData
+	var bannerDataSet []SpecialEffectDataItem
+	var tagDataSet []SpecialEffectDataItem
+	var dialogDataSet = sData.TalkData
 	for _, item := range sData.SpecialEffectData {
 		if item.EffectType == 8 {
-			bannerData = append(bannerData, item)
+			bannerDataSet = append(bannerDataSet, item)
 		} else if item.EffectType == 18 {
-			tagData = append(tagData, item)
+			tagDataSet = append(tagDataSet, item)
 		}
 	}
-	if len(dialogData) == len(tData.Dialogs) {
-		for i, item := range dialogData {
+	if len(dialogDataSet) == len(tData.Dialogs) {
+		for i, item := range dialogDataSet {
 			item.Body = tData.Dialogs[i].Body
 			item.WindowDisplayName = tData.Dialogs[i].Chara
-			dialogData[i] = item
+			dialogDataSet[i] = item
 		}
 		go t.Log(Log{Type: "string", Data: "[Processing] Dialog Translation Applied"})
 	} else if len(tData.Dialogs) > 0 {
 		go t.Log(Log{Type: "string", Data: "[Warning] Dialog Translation Not Matched"})
 	}
-	if len(tagData) == len(tData.Tags) {
-		for i, item := range tagData {
+	if len(tagDataSet) > 0 && len(tagDataSet) == len(tData.Tags) {
+		for i, item := range tagDataSet {
 			item.StringVal = tData.Tags[i].Body
-			tagData[i] = item
+			tagDataSet[i] = item
 		}
 		go t.Log(Log{Type: "string", Data: "[Processing] Area Tag Translation Applied"})
 	} else if len(tData.Tags) > 0 {
 		go t.Log(Log{Type: "string", Data: "[Warning] Area Tag Translation Not Matched"})
 	}
-	if len(bannerData) == len(tData.Banners) {
-		for i, item := range bannerData {
+	if len(bannerDataSet) == len(tData.Banners) {
+		for i, item := range bannerDataSet {
 			item.StringVal = tData.Banners[i].Body
-			bannerData[i] = item
+			bannerDataSet[i] = item
 		}
 		go t.Log(Log{Type: "string", Data: "[Processing] Area Banner Translation Applied"})
 	} else if len(tData.Banners) > 0 {
@@ -639,279 +641,324 @@ func (t *Task) match() (
 		}
 	}
 
-	var frame = gocv.NewMat()
 	var videoHeight = int(vc.Get(gocv.VideoCaptureFrameHeight))
 	var videoWidth = int(vc.Get(gocv.VideoCaptureFrameWidth))
 	var videoFps = vc.Get(gocv.VideoCaptureFPS)
-	var videoFrameTimeMs = 1000.0 / videoFps
 	var videoFrameCount = int(vc.Get(gocv.VideoCaptureFrameCount))
 
-	//Templates
+	// Templates
 	var pointer = getResizedDialogPointer(videoHeight, videoWidth)
 	var bannerArea = getBannerArea(videoHeight, videoWidth)
-	var bannerEdge = getResizedAreaEdge(videoHeight, videoWidth)
-	s := int(math.Abs(float64(bannerArea[1] - bannerArea[0])))
-	gocv.Resize(bannerEdge, &bannerEdge, image.Point{X: s, Y: s}, 0, 0, gocv.InterpolationLanczos4)
-	var bannerCanny = gocv.NewMat()
-	gocv.Canny(bannerEdge, &bannerCanny, 50, 150)
 	var bannerReverse = gocv.NewMat()
-	gocv.Threshold(bannerEdge, &bannerReverse, 128.0, 255.0, gocv.ThresholdBinaryInv)
-	var bannerMask = getAreaBannerMask(getAreaMaskSize(videoHeight, videoWidth))
+	var bannerCanny = gocv.NewMat()
+	{
+		var bannerEdge = getResizedAreaEdge(videoHeight, videoWidth)
+		s := int(math.Abs(float64(bannerArea[1] - bannerArea[0])))
+		gocv.Resize(bannerEdge, &bannerEdge, image.Point{X: s, Y: s}, 0, 0, gocv.InterpolationLanczos4)
+		gocv.Canny(bannerEdge, &bannerCanny, 50, 150)
+		gocv.Threshold(bannerEdge, &bannerReverse, 128.0, 255.0, gocv.ThresholdBinaryInv)
+		_ = bannerEdge.Close()
+	}
+
 	var menuSign = getResizedInterfaceMenu(videoHeight, videoWidth)
 	var areaTag = getResizedAreaTag(videoHeight, videoWidth)
 
-	var dialogLastPointCenter = image.Point{}
 	var contentStart = false
 	var tagProcessRunning = true
 	var bannerProcessRunning = true
 	var dialogProcessRunning = true
-	var dialogTotalCount, bannerTotalCount, tagTotalCount int
 	if !t.Config.VideoOnly {
-		tagProcessRunning = len(tagData) > 0
-		tagTotalCount = len(tagData)
-		bannerProcessRunning = len(bannerData) > 0
-		bannerTotalCount = len(bannerData)
-		dialogProcessRunning = len(dialogData) > 0
-		dialogTotalCount = len(dialogData)
+		tagProcessRunning = len(tagDataSet) > 0
+		bannerProcessRunning = len(bannerDataSet) > 0
+		dialogProcessRunning = len(dialogDataSet) > 0
 	}
 
-	var bannerDataProcessing SpecialEffectDataItem
-	var bannerProcessingFrames []areaBannerFrame
-	var bannerProcessedCount = 0
-	var bannerLastResult = false
-
-	var tagProcessingFrames []areaTagFrame
-	var tagDataProcessing SpecialEffectDataItem
-	var tagProcessedCount = 0
-	var tagLastResult image.Point
-
-	var dialogDataProcessing TalkDataItem
-	var dialogProcessingFrames []dialogFrame
-
-	var dialogLastEndFrame dialogFrame
-	var dialogLastEndEvent SubtitleEventItem
-	var dialogLastStatus = uint8(0)
-	var dialogConstPointCenter image.Point
-	var dialogProcessedCount = 0
-	var dialogIsMaskStart = false
-
 	var totalFrameCount int
-	var cut = false
+	var videoCut = false
 	var nowFrameCount = 0
 	var setStopped = false
 	var fpsTimeCounter = []LogProgress{{Time: int(timeStart)}}
-	if t.Config.Duration == [2]int{} {
+	if t.Config.Duration == [2]int{} || t.Config.Duration == [2]int{0, videoFrameCount} {
 		totalFrameCount = videoFrameCount
 	} else {
-		cut = true
+		videoCut = true
 		totalFrameCount = t.Config.Duration[1] - t.Config.Duration[0]
 		vc.Set(gocv.VideoCapturePosFrames, float64(t.Config.Duration[0]))
 		nowFrameCount = t.Config.Duration[0]
+		contentStart = true
 	}
-	for {
-		if t.Stopped {
-			setStopped = true
-			break
-		}
-		vc.Read(&frame)
-		if frame.Empty() {
-			break
-		}
-		grayFrame := gocv.NewMat()
-		gocv.CvtColor(frame, &grayFrame, gocv.ColorBGRToGray)
-		if !contentStart {
-			contentStart = matchCheckStart(grayFrame, menuSign)
-		}
 
-		if contentStart {
-			var seIndexNow int
-			var running = true
-			if !t.Config.VideoOnly {
-				unprocessedEvent := dialogIndex[dialogProcessedCount:]
-				unprocessedEvent = append(unprocessedEvent, bannerIndex[bannerProcessedCount:]...)
-				unprocessedEvent = append(unprocessedEvent, tagIndex[tagProcessedCount:]...)
-				if len(unprocessedEvent) > 0 {
-					seIndexNow = MinInt(unprocessedEvent)
-				} else {
-					running = false
-				}
+	var dialogFrameSet [][]dialogFrame
+	var bannerFrameSet [][]areaBannerFrame
+	var tagFrameSet [][]areaTagFrame
+	var dialogConstPointCenter image.Point
+	func() {
+		var bannerProcessingFrames []areaBannerFrame
+		var bannerProcessedCount = 0
+		var bannerLastResult = false
+
+		var tagProcessingFrames []areaTagFrame
+		var tagProcessedCount = 0
+		var tagLastResult image.Point
+
+		var dialogLastStatus = uint8(0)
+		var dialogProcessedCount = 0
+		var dialogProcessingFrames []dialogFrame
+		var dialogLastPointCenter = image.Point{}
+
+		for {
+			if t.Stopped {
+				setStopped = true
+				break
 			}
-			if running {
-				var group = sync.WaitGroup{}
-				go func() {
-					group.Add(1)
-					if dialogProcessRunning {
-						dialogProcessResult := matchFrameDialog(grayFrame, pointer, dialogLastPointCenter)
-						if dialogProcessResult.status == 1 {
-							if !t.Config.VideoOnly {
-								index := Index(dialogDataProcessing, sData.TalkData)
-								if index > 0 {
-									dialogIsMaskStart = sData.TalkData[index-1].WhenFinishCloseWindow == 1
-								} else if index == 0 {
-									dialogIsMaskStart = true
-								} else {
-									if dialogLastStatus == 0 {
-										dialogIsMaskStart = true
-									} else if dialogLastStatus == 2 {
-										dialogIsMaskStart = false
-									}
-								}
-							} else {
-								if dialogLastStatus == 0 {
-									dialogIsMaskStart = true
-								} else if dialogLastStatus == 2 {
-									dialogIsMaskStart = false
-								}
-							}
-						}
-						if dialogProcessResult.status == 2 && dialogConstPointCenter.Eq(image.Point{}) {
-							dialogConstPointCenter = dialogProcessResult.pointCenter
-						}
-						if (dialogProcessResult.status == 0 || dialogProcessResult.status == 1) && dialogLastStatus == 2 {
-							dialogProcessedCount += 1
-							var dialogInfo TalkDataItem
+			var frame = gocv.NewMat()
+			vc.Read(&frame)
+			if frame.Empty() {
+				break
+			}
 
-							if !t.Config.VideoOnly {
-								dialogInfo = dialogDataProcessing
-							} else {
-								dialogInfo = TalkDataItem{}
-							}
-							characterMasks, characterEvents, dialogMasks, dialogEvents := dialogMakeEvent(
-								dialogInfo, pointer.Cols(), videoHeight, videoWidth, videoFrameTimeMs, dialogLastEndFrame,
-								dialogProcessingFrames, dialogLastEndEvent, dialogIsMaskStart, t.Config)
-							go t.Log(Log{Type: "string",
-								Data: fmt.Sprintf("[Processing] Generated %d Events for Dialog No.%d",
-									len(characterMasks)+len(characterEvents)+len(dialogMasks)+len(dialogEvents),
-									dialogProcessedCount)})
-							dialogLastEndFrame = dialogProcessingFrames[len(dialogProcessingFrames)-1]
-							dialogLastEndEvent = dialogEvents[len(dialogEvents)-1]
-							dialogTalkDataEvents = append(dialogTalkDataEvents, dialogMasks...)
-							dialogTalkDataEvents = append(dialogTalkDataEvents, dialogEvents...)
-
-							dialogCharacterEvents = append(dialogCharacterEvents, characterMasks...)
-							dialogCharacterEvents = append(dialogCharacterEvents, characterEvents...)
-							dialogProcessingFrames = []dialogFrame{}
-
-							dialogDataProcessing = TalkDataItem{}
-							dialogIsMaskStart = false
-							if !t.Config.VideoOnly && dialogProcessedCount == dialogTotalCount {
-								dialogProcessRunning = false
-							}
-						}
-						if dialogProcessResult.status > 0 {
-							dialogProcessingFrames = append(dialogProcessingFrames, dialogFrame{
-								FrameId: nowFrameCount, PointCenter: dialogProcessResult.pointCenter})
-						}
-						if !t.Config.VideoOnly && dialogDataProcessing == (TalkDataItem{}) {
-							if dialogProcessedCount < len(dialogData) {
-								dialogDataProcessing = dialogData[dialogProcessedCount]
-							}
-						}
-						dialogLastStatus = dialogProcessResult.status
-						dialogLastPointCenter = dialogProcessResult.pointCenter
+			gocv.CvtColor(frame, &frame, gocv.ColorBGRToGray)
+			if !contentStart {
+				contentStart = matchCheckStart(frame, menuSign)
+			}
+			if contentStart {
+				var seIndexNow int
+				var running = true
+				if !t.Config.VideoOnly {
+					unprocessedEvent := dialogIndex[dialogProcessedCount:]
+					unprocessedEvent = append(unprocessedEvent, bannerIndex[bannerProcessedCount:]...)
+					unprocessedEvent = append(unprocessedEvent, tagIndex[tagProcessedCount:]...)
+					if len(unprocessedEvent) > 0 {
+						seIndexNow = MinInt(unprocessedEvent)
+					} else {
+						running = false
 					}
-					group.Done()
-				}()
-				go func() {
-					group.Add(1)
+				}
+				if running {
+					var dialogProcessFrame gocv.Mat
+					if dialogProcessRunning {
+						dialogProcessFrame = frame.Clone()
+					}
+
+					var bannerProcessNow = false
+					var bannerProcessFrame gocv.Mat
 					if bannerProcessRunning {
-						process := false
-						if cut || t.Config.VideoOnly {
-							process = true
-						} else if bannerIndex[bannerProcessedCount] == seIndexNow {
-							process = true
+						if videoCut || t.Config.VideoOnly {
+							bannerProcessNow = true
+						} else if bannerProcessedCount < len(bannerIndex) && bannerIndex[bannerProcessedCount] == seIndexNow {
+							bannerProcessNow = true
 						}
-						if process {
-							bannerProcessResult := matchFrameBanner(grayFrame, bannerCanny, bannerReverse, bannerArea)
+						if bannerProcessNow {
+							bannerProcessFrame = frame.Clone()
+						}
+					}
+
+					var tagProcessNow = false
+					var tagProcessFrame gocv.Mat
+					if tagProcessRunning {
+						if videoCut || t.Config.VideoOnly {
+							tagProcessNow = true
+						} else if tagProcessedCount < len(tagIndex) && (tagIndex[tagProcessedCount] == seIndexNow) {
+							tagProcessNow = true
+						}
+						if tagProcessNow {
+							tagProcessFrame = frame.Clone()
+						}
+					}
+
+					var group = sync.WaitGroup{}
+
+					go func() {
+						group.Add(1)
+						if dialogProcessRunning {
+							dialogProcessResult := matchFrameDialog(dialogProcessFrame, pointer, dialogLastPointCenter)
+							if dialogConstPointCenter.Eq(image.Point{}) {
+								if dialogProcessResult.status == 2 {
+									dialogConstPointCenter = dialogProcessResult.pointCenter
+								}
+							}
+							if dialogProcessResult.status != 2 && dialogLastStatus == 2 {
+								dialogFrameSet = append(dialogFrameSet, dialogProcessingFrames)
+								dialogProcessedCount = len(dialogFrameSet)
+
+								go t.Log(Log{
+									Type: "string",
+									Data: fmt.Sprintf("[Processing] Locate %d Frames for Dialog No.%d", len(dialogProcessingFrames), dialogProcessedCount),
+								})
+
+								dialogProcessingFrames = []dialogFrame{}
+								if !t.Config.VideoOnly && dialogProcessedCount == len(dialogDataSet) {
+									dialogProcessRunning = false
+								}
+							}
+							if dialogProcessResult.status != 0 {
+								dialogProcessingFrames = append(dialogProcessingFrames, dialogFrame{
+									FrameId: nowFrameCount, PointCenter: dialogProcessResult.pointCenter})
+							}
+							dialogLastStatus = dialogProcessResult.status
+							dialogLastPointCenter = dialogProcessResult.pointCenter
+							_ = dialogProcessFrame.Close()
+						}
+						group.Done()
+					}()
+					go func() {
+						group.Add(1)
+						if bannerProcessNow {
+							bannerProcessResult := matchFrameBanner(bannerProcessFrame, bannerCanny, bannerReverse, bannerArea)
 							if bannerProcessResult {
 								bannerProcessingFrames = append(bannerProcessingFrames, areaBannerFrame{FrameId: nowFrameCount})
 							}
 							if bannerLastResult && !bannerProcessResult {
-								bannerProcessedCount += 1
-								events := areaBannerMakeEvent(bannerDataProcessing, bannerMask, videoFrameTimeMs, bannerProcessingFrames)
-								go t.Log(Log{Type: "string",
-									Data: fmt.Sprintf("[Processing] Generated %d Events for Banner No.%d", len(events), bannerProcessedCount),
+								bannerFrameSet = append(bannerFrameSet, bannerProcessingFrames)
+								bannerProcessedCount = len(bannerFrameSet)
+
+								go t.Log(Log{
+									Type: "string",
+									Data: fmt.Sprintf("[Processing] Locate %d Frames for Banner No.%d", len(bannerProcessingFrames), bannerProcessedCount),
 								})
-								bannerEvents = append(bannerEvents, events...)
+
 								bannerProcessingFrames = []areaBannerFrame{}
-								bannerDataProcessing = SpecialEffectDataItem{}
-								if !t.Config.VideoOnly && bannerProcessedCount >= bannerTotalCount {
+								if !t.Config.VideoOnly && bannerProcessedCount == len(bannerDataSet) {
 									bannerProcessRunning = false
 								}
 							}
-							if !t.Config.VideoOnly && bannerDataProcessing == (SpecialEffectDataItem{}) {
-								if bannerProcessedCount < len(bannerData) {
-									bannerDataProcessing = bannerData[bannerProcessedCount]
-								}
-							}
 							bannerLastResult = bannerProcessResult
+							_ = bannerProcessFrame.Close()
 						}
-					}
-					group.Done()
-				}()
-				go func() {
-					group.Add(1)
-					if tagProcessRunning {
-						process := false
-						if cut || t.Config.VideoOnly {
-							process = true
-						} else if tagIndex[tagProcessedCount] == seIndexNow {
-							process = true
-						}
-						if process {
-							tagProcessResult := matchFrameTag(grayFrame, areaTag)
+						group.Done()
+					}()
+					go func() {
+						group.Add(1)
+						if tagProcessNow {
+							tagProcessResult := matchFrameTag(tagProcessFrame, areaTag)
 							if !tagProcessResult.Eq(image.Point{}) {
 								tagProcessingFrames = append(tagProcessingFrames,
 									areaTagFrame{Position: tagProcessResult, FrameId: nowFrameCount})
 							}
 							if !tagLastResult.Eq(image.Point{}) && tagProcessResult.Eq(image.Point{}) {
-								tagProcessedCount += 1
-								events := areaTagMakeEvent(tagDataProcessing, videoHeight, videoWidth, videoFrameTimeMs, tagProcessingFrames)
+								tagFrameSet = append(tagFrameSet, tagProcessingFrames)
+								tagProcessedCount = len(tagFrameSet)
+
 								go t.Log(Log{
 									Type: "string",
-									Data: fmt.Sprintf("[Processing] Generated %d Events for Banner No.%d", len(events), tagProcessedCount),
+									Data: fmt.Sprintf("[Processing] Locate %d Frames for Tag No.%d", len(tagProcessingFrames), tagProcessedCount),
 								})
-								tagEvents = append(tagEvents, events...)
-								tagProcessingFrames = []areaTagFrame{}
-								tagDataProcessing = SpecialEffectDataItem{}
 
-								if !t.Config.VideoOnly && tagProcessedCount >= tagTotalCount {
+								tagProcessingFrames = []areaTagFrame{}
+								if !t.Config.VideoOnly && tagProcessedCount == len(tagDataSet) {
 									tagProcessRunning = false
 								}
-							}
-							if !t.Config.VideoOnly && tagDataProcessing == (SpecialEffectDataItem{}) {
-								if tagProcessedCount < len(tagData) {
-									tagDataProcessing = tagData[tagProcessedCount]
-								}
+
 							}
 							tagLastResult = tagProcessResult
+							_ = tagProcessFrame.Close()
 						}
-					}
-					group.Done()
-				}()
-				group.Wait()
+
+						group.Done()
+					}()
+					group.Wait()
+				}
+			}
+
+			_ = frame.Close()
+
+			nowFrameCount += 1
+			lp := LogProgress{
+				Frame:    nowFrameCount,
+				Time:     int(time.Now().UnixMilli() - timeStart),
+				Remains:  totalFrameCount + t.Config.Duration[0] - nowFrameCount,
+				Progress: float64(nowFrameCount-t.Config.Duration[0]) / float64(totalFrameCount),
+				Speed:    float64(nowFrameCount) / (float64(time.Now().UnixMilli()-timeStart) / 1000.0),
+			}
+			lp.Fps = float64(lp.Frame-fpsTimeCounter[0].Frame) / float64(lp.Time-fpsTimeCounter[0].Time) * 1000.0
+			if len(fpsTimeCounter) == int(videoFps/2.0) || fpsTimeCounter[0].Frame == 0 {
+				fpsTimeCounter = append(fpsTimeCounter[1:], lp)
+			} else {
+				fpsTimeCounter = append(fpsTimeCounter, lp)
+			}
+			l, _ := json.Marshal(lp)
+			go t.Log(Log{Type: "dict", Data: string(l)})
+			if nowFrameCount-t.Config.Duration[0] > totalFrameCount {
+				break
 			}
 		}
-		nowFrameCount += 1
-		lp := LogProgress{
-			Frame:    nowFrameCount,
-			Time:     int(time.Now().UnixMilli() - timeStart),
-			Remains:  totalFrameCount + t.Config.Duration[0] - nowFrameCount,
-			Progress: float64(nowFrameCount-t.Config.Duration[0]) / float64(totalFrameCount),
-			Speed:    float64(nowFrameCount) / (float64(time.Now().UnixMilli()-timeStart) / 1000.0),
+	}()
+	var videoFrameTimeMs = 1000.0 / videoFps
+	var bannerMask = getAreaBannerMask(getAreaMaskSize(videoHeight, videoWidth))
+
+	if !setStopped {
+		for i, frames := range dialogFrameSet {
+			var dialogData = TalkDataItem{}
+			if !t.Config.VideoOnly && i < len(dialogDataSet) {
+				dialogData = dialogDataSet[i]
+			}
+			var dialogLastEndFrame dialogFrame
+			var dialogLastEndEvent SubtitleEventItem
+			if i > 0 {
+				lfs := dialogFrameSet[i-1]
+				if len(lfs) > 0 {
+					dialogLastEndFrame = lfs[len(lfs)-1]
+				}
+				if len(dialogTalkDataEvents) > 0 {
+					dialogLastEndEvent = dialogTalkDataEvents[len(dialogTalkDataEvents)-1]
+				}
+			}
+			var dialogIsMaskStart bool
+			if !t.Config.VideoOnly {
+				index := Index(dialogData, sData.TalkData)
+				if index > 0 {
+					dialogIsMaskStart = sData.TalkData[index-1].WhenFinishCloseWindow == 1
+				} else if index == 0 {
+					dialogIsMaskStart = true
+				}
+			} else {
+				if i > 0 {
+					lfs := dialogFrameSet[i-1]
+					if len(lfs) > 0 && len(frames) > 0 && lfs[len(lfs)-1].FrameId == frames[0].FrameId-1 {
+						dialogIsMaskStart = true
+
+					}
+				}
+			}
+
+			characterMasks, characterEvents, dialogMasks, dialogEvents := dialogMakeEvent(
+				dialogData, pointer.Cols(), videoHeight, videoWidth, videoFrameTimeMs, dialogLastEndFrame,
+				frames, dialogLastEndEvent, dialogIsMaskStart, t.Config)
+
+			dialogTalkDataEvents = append(dialogTalkDataEvents, dialogMasks...)
+			dialogTalkDataEvents = append(dialogTalkDataEvents, dialogEvents...)
+			dialogCharacterEvents = append(dialogCharacterEvents, characterMasks...)
+			dialogCharacterEvents = append(dialogCharacterEvents, characterEvents...)
+
+			go t.Log(Log{Type: "string",
+				Data: fmt.Sprintf("[Processing] Generated %d Events for Dialog No.%d",
+					len(characterMasks)+len(characterEvents)+len(dialogMasks)+len(dialogEvents), i+1)})
 		}
-		lp.Fps = float64(lp.Frame-fpsTimeCounter[0].Frame) / float64(lp.Time-fpsTimeCounter[0].Time) * 1000.0
-		if len(fpsTimeCounter) == int(videoFps/2.0) || fpsTimeCounter[0].Frame == 0 {
-			fpsTimeCounter = append(fpsTimeCounter[1:], lp)
-		} else {
-			fpsTimeCounter = append(fpsTimeCounter, lp)
+		for i, frames := range bannerFrameSet {
+			var bannerData SpecialEffectDataItem
+			if !t.Config.VideoOnly && i < len(bannerDataSet) {
+				bannerData = bannerDataSet[i]
+			}
+			events := areaBannerMakeEvent(bannerData, bannerMask, videoFrameTimeMs, frames)
+			bannerEvents = append(bannerEvents, events...)
+			go t.Log(Log{Type: "string",
+				Data: fmt.Sprintf("[Processing] Generated %d Events for Banner No.%d", len(events), i+1),
+			})
 		}
-		l, _ := json.Marshal(lp)
-		go t.Log(Log{Type: "dict", Data: string(l)})
-		if nowFrameCount-t.Config.Duration[0] > totalFrameCount {
-			break
+		for i, frames := range tagFrameSet {
+			var tagData SpecialEffectDataItem
+			if !t.Config.VideoOnly && i < len(tagDataSet) {
+				tagData = tagDataSet[i]
+			}
+			events := areaTagMakeEvent(tagData, videoHeight, videoWidth, videoFrameTimeMs, frames)
+			tagEvents = append(tagEvents, events...)
+			go t.Log(Log{
+				Type: "string",
+				Data: fmt.Sprintf("[Processing] Generated %d Events for Banner No.%d", len(events), i+1),
+			})
 		}
 	}
+
 	if !setStopped {
 		if len(dialogTalkDataEvents)+len(dialogCharacterEvents)+len(bannerEvents)+len(tagEvents) == 0 {
 			err = errors.New("no Event Matched")
@@ -919,13 +966,13 @@ func (t *Task) match() (
 			dialogStyles = dialogMakeStyle(t.Config, dialogConstPointCenter, pointer.Cols())
 			if !t.Config.VideoOnly {
 				var recheck []string
-				if dialogProcessedCount != len(dialogData) {
+				if len(dialogFrameSet) != len(dialogDataSet) {
 					recheck = append(recheck, "Dialog")
 				}
-				if bannerProcessedCount != len(bannerData) {
+				if len(bannerDataSet) != len(bannerDataSet) {
 					recheck = append(recheck, "Banner")
 				}
-				if tagProcessedCount != len(tagData) {
+				if len(tagFrameSet) != len(tagDataSet) {
 					recheck = append(recheck, "Tag")
 				}
 				if len(recheck) > 0 {
@@ -938,6 +985,12 @@ func (t *Task) match() (
 	} else {
 		err = errors.New("process was Stopped")
 	}
+
+	_ = pointer.Close()
+	_ = bannerCanny.Close()
+	_ = bannerReverse.Close()
+	_ = menuSign.Close()
+	_ = areaTag.Close()
 	return
 }
 func (t *Task) Run() {
@@ -969,10 +1022,13 @@ func (t *Task) Run() {
 		vc, err := gocv.VideoCaptureFile(t.Config.VideoFile)
 		CheckErr(err)
 		res := Subtitle{
-			ScriptInfo: SubtitleScriptInfo{Title: filename, ScriptType: "v4.00+", PlayRexX: int(vc.Get(gocv.VideoCaptureFrameWidth)), PlayRexY: int(vc.Get(gocv.VideoCaptureFrameHeight))},
-			Garbage:    SubtitleGarbage{AudioFile: filename, VideoFile: filename},
-			Styles:     SubtitleStyles{Items: append(dialogStyles, staffStyle...)},
-			Events:     SubtitleEvents{Items: events},
+			ScriptInfo: SubtitleScriptInfo{
+				Title: filename, ScriptType: "v4.00+",
+				PlayRexX: int(vc.Get(gocv.VideoCaptureFrameWidth)),
+				PlayRexY: int(vc.Get(gocv.VideoCaptureFrameHeight))},
+			Garbage: SubtitleGarbage{AudioFile: filename, VideoFile: filename},
+			Styles:  SubtitleStyles{Items: append(dialogStyles, staffStyle...)},
+			Events:  SubtitleEvents{Items: events},
 		}
 
 		exists, err := PathExists(t.Config.OutputPath)
@@ -1005,6 +1061,9 @@ func (t *Task) Stop() {
 }
 
 func NewTask(config TaskConfig) Task {
+	// var c = config
+	// var defaultTyperInterval = [2]int{50, 80}
+
 	var task = Task{
 		Config:     config,
 		Processing: false,
