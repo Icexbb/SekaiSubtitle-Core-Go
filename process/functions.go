@@ -40,7 +40,7 @@ func getResizedDialogPointer(h, w int) gocv.Mat {
 func getResizedInterfaceMenu(h, w int) gocv.Mat {
 	return getResizedB64Img(B64Menu, h, w)
 }
-func getResizedAreaTag(h, w int) gocv.Mat {
+func getResizedAreaMarkerTemplate(h, w int) gocv.Mat {
 	return getResizedB64Img(B64Place, h, w)
 }
 func getResizedAreaEdge(h, w int) gocv.Mat {
@@ -226,14 +226,14 @@ func checkFrameDialogStatus(frame, pointer gocv.Mat, pointCenter image.Point) ui
 	}
 	return result
 }
-func checkFrameAreaTagPosition(frame, tag gocv.Mat) image.Point {
+func checkFrameAreaMarkerPosition(frame, marker gocv.Mat) image.Point {
 	frameHeight := frame.Rows()
 	frameWidth := frame.Cols()
 
 	res := gocv.NewMat()
 	empty := gocv.NewMat()
 	cut := frame.Region(image.Rect(0, 0, frameWidth/3, frameHeight/8))
-	gocv.MatchTemplate(cut, tag, &res, gocv.TmCcoeffNormed, empty)
+	gocv.MatchTemplate(cut, marker, &res, gocv.TmCcoeffNormed, empty)
 	_, maxVal, _, maxLoc := gocv.MinMaxLoc(res)
 
 	_ = res.Close()
@@ -312,7 +312,7 @@ func getAreaBannerMask(info areaMaskInfo) string {
 	result += mask.proto
 	return result
 }
-func getAreaTagMask(h, w int) (string, [2]int) {
+func getAreaMarkerMask(h, w int) (string, [2]int) {
 	var originMask = "m 88 64 b 70 65 54 85 54 102 b 54 119 70 138 88 138 l 749 138 b 770 138 787 118 787 102 " +
 		"b 787 85 770 65 749 64"
 	var result = "{\\an7\\p1\\c&H674445&}"

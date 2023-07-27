@@ -15,7 +15,7 @@ import (
 	"gocv.io/x/gocv"
 )
 
-var AppVersion = "v2.0.230714"
+var AppVersion = "v2.0.230727"
 var TaskList = make(map[string]*process.Task)
 var TaskListMux = new(sync.RWMutex)
 var upgrader = websocket.Upgrader{}
@@ -261,7 +261,7 @@ func videoInfoHandler(w http.ResponseWriter, r *http.Request) {
 			Success bool   `json:"success"`
 			Data    string `json:"data"`
 		}
-		exists, _ := process.PathExists(vf)
+		exists := process.FileExist(vf)
 		if !exists {
 			r, _ := json.Marshal(resp{
 				Success: false,
@@ -320,8 +320,8 @@ func taskConfigHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func serve(port int) {
-	log.Println("Sekai Subtitle Core Started")
-	log.Printf("Serve on localhost:%d", port)
+	log.Printf("Sekai Subtitle Core %s Started", AppVersion)
+	log.Printf("Serve on localhost:%d\n", port)
 	router := mux.NewRouter()
 	router.HandleFunc("/", wsHandler)
 	router.HandleFunc("/video", videoInfoHandler)
@@ -329,37 +329,37 @@ func serve(port int) {
 	log.Fatal(http.ListenAndServe(fmt.Sprintf("127.0.0.1:%d", port), router))
 }
 func test() {
-	var testConfig = process.TaskConfig{
-		VideoFile:     "E:\\Project Sekai\\test\\event_80_03.mp4",
-		JsonFile:      "E:\\Project Sekai\\test\\event_80_03.json",
-		TranslateFile: "",
-		OutputPath:    "E:\\Project Sekai\\test\\event_80_03.ass",
-		Overwrite:     true,
-		Font:          "",
-		VideoOnly:     false,
-		Staff:         nil,
-		TyperInterval: [2]int{50, 80},
-		Duration:      [2]int{0, 0},
-		Debug:         true,
-	}
-	var task = process.NewTask(testConfig)
-	go task.Run()
-
-	for {
-		select {
-		case logMsg := <-task.LogChan:
-			if logMsg.Type == "string" {
-				log.Printf("Task %s: %s\n", task.Id, logMsg.Data)
-				if logMsg.Data == "[Finish] Process Finished" {
-					os.Exit(0)
-				}
-			} else {
-				// log.Printf("Task %s: %s\n", task.Id, logMsg.Data)
-			}
-		default:
-			// PASS
-		}
-	}
+	fmt.Println("Nothing Here")
+	// var testConfig = process.TaskConfig{
+	// 	VideoFile:     "E:\\Project Sekai\\test\\Connect_live_mmj_01.mp4",
+	// 	DataFile:      []string{"E:\\Project Sekai\\test\\Connect_live_mmj_01.pjs.txt"},
+	// 	OutputPath:    "E:\\Project Sekai\\test\\Connect_live_mmj_01.ass",
+	// 	Overwrite:     true,
+	// 	Font:          "",
+	// 	VideoOnly:     false,
+	// 	Staff:         nil,
+	// 	TyperInterval: [2]int{50, 80},
+	// 	Duration:      [2]int{0, 0},
+	// 	Debug:         true,
+	// }
+	// var task = process.NewTask(testConfig)
+	// go task.Run()
+	//
+	// for {
+	// 	select {
+	// 	case logMsg := <-task.LogChan:
+	// 		if logMsg.Type == "string" {
+	// 			log.Printf("Task %s: %s\n", task.Id, logMsg.Data)
+	// 			if logMsg.Data == "[Finish] Process Finished" {
+	// 				os.Exit(0)
+	// 			}
+	// 		} else {
+	// 			// log.Printf("Task %s: %s\n", task.Id, logMsg.Data)
+	// 		}
+	// 	default:
+	// 		// PASS
+	// 	}
+	// }
 }
 func main() {
 	var printVersion bool
