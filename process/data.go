@@ -15,6 +15,10 @@ type VoiceData struct {
 }
 
 func (v VoiceData) CharacterId() int {
+	var l2dCid = C2Did_to_Cid[v.Character2DId]
+	if l2dCid >= 1 && l2dCid <= 26 {
+		return l2dCid
+	}
 	s := strings.Split(v.VoiceId, "_")
 	var ns []int
 	for i := range s {
