@@ -708,9 +708,8 @@ func (t *Task) match() (
 					}
 
 					var group = sync.WaitGroup{}
-
+					group.Add(3)
 					go func() {
-						group.Add(1)
 						if dialogProcessRunning {
 							dialogProcessResult := matchFrameDialog(dialogProcessFrame, templateDialogPointer, dialogLastPointCenter)
 							if dialogConstPointCenter.Eq(image.Point{}) {
@@ -743,7 +742,6 @@ func (t *Task) match() (
 						group.Done()
 					}()
 					go func() {
-						group.Add(1)
 						if bannerProcessNow {
 							bannerProcessResult := matchFrameBanner(bannerProcessFrame, templateBannerCanny, templateBannerReverse, bannerArea)
 							if bannerProcessResult {
@@ -769,7 +767,6 @@ func (t *Task) match() (
 						group.Done()
 					}()
 					go func() {
-						group.Add(1)
 						if markerProcessNow {
 							markerProcessResult := matchFrameMarker(markerProcessFrame, templateMarker)
 							if !markerProcessResult.Eq(image.Point{}) {
@@ -793,7 +790,6 @@ func (t *Task) match() (
 							markerLastResult = markerProcessResult
 							_ = markerProcessFrame.Close()
 						}
-
 						group.Done()
 					}()
 					group.Wait()

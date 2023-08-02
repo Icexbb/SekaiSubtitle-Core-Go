@@ -113,20 +113,26 @@ type DialogTranslate struct {
 	Chara string
 	Body  string
 }
-type BannerTranslate struct {
+type EffectTranslate struct {
 	Body string
 }
-type MarkerTranslate struct {
-	Body string
-}
+
+//	type BannerTranslate struct {
+//		Body string
+//	}
+//
+//	type MarkerTranslate struct {
+//		Body string
+//	}
 type TranslateData struct {
 	Dialogs []DialogTranslate
-	Banners []BannerTranslate
-	Markers []MarkerTranslate
+	Effects []EffectTranslate
+	// Banners []BannerTranslate
+	// Markers []MarkerTranslate
 }
 
 func (t TranslateData) Empty() bool {
-	return len(t.Dialogs)+len(t.Banners)+len(t.Markers) == 0
+	return len(t.Dialogs)+len(t.Effects) == 0
 }
 
 var DialogReg, _ = regexp.Compile("^([^：]+)：(.*)$")
@@ -135,7 +141,7 @@ func ReadText(file string) TranslateData {
 	var result = TranslateData{}
 	if FileExist(file) {
 		var Dialogs []DialogTranslate
-		var Banners []BannerTranslate
+		var Effects []EffectTranslate
 
 		dat, _ := os.ReadFile(file)
 		data := strings.Split(string(dat), "\n")
@@ -146,12 +152,12 @@ func ReadText(file string) TranslateData {
 				r := DialogTranslate{Chara: res[1], Body: res[2]}
 				Dialogs = append(Dialogs, r)
 			} else {
-				r := BannerTranslate{Body: v}
-				Banners = append(Banners, r)
+				r := EffectTranslate{Body: v}
+				Effects = append(Effects, r)
 			}
 		}
 		result.Dialogs = Dialogs
-		result.Banners = Banners
+		result.Effects = Effects
 	}
 
 	return result
@@ -255,6 +261,21 @@ func (s StoryEventSet) IndexType(t string, i int) int {
 	}
 	return -1
 }
+func (s StoryEventSet) IndexTypes(ts []string, i int) int {
+	similarCount := 0
+	for i2, event := range s {
+		for _, t := range ts {
+			if event.Type == t {
+				if similarCount == i {
+					return i2
+				}
+				similarCount += 1
+			}
+		}
+
+	}
+	return -1
+}
 
 type PJSTranslationData struct {
 	Data StoryEventSet `yaml:"内容"`
@@ -275,6 +296,7 @@ func (y PJSTranslationData) get(t []string) StoryEventSet {
 func (y PJSTranslationData) Dialogs() StoryEventSet { return y.get([]string{"Dialog"}) }
 func (y PJSTranslationData) Banners() StoryEventSet { return y.get([]string{"Banner"}) }
 func (y PJSTranslationData) Markers() StoryEventSet { return y.get([]string{"Marker"}) }
+func (y PJSTranslationData) Effects() StoryEventSet { return y.get([]string{"Banner", "Marker"}) }
 func (y PJSTranslationData) DPeriod() StoryEventSet { return y.get([]string{"Dialog", "Period"}) }
 func (y PJSTranslationData) String() string {
 	var s []string
@@ -357,19 +379,11 @@ func MakePJSData(jsonFile, textFile string) PJSTranslationData {
 				}
 			}
 		}
-		for i, banner := range textData.Banners {
-			if i < result.Banners().Count() {
-				iT := result.Data.IndexType("Banner", i)
+		for i, effect := range textData.Effects {
+			if i < result.Effects().Count() {
+				iT := result.Data.IndexTypes([]string{"Banner", "Marker"}, i)
 				if iT >= 0 {
-					result.Data[iT].ContentT = banner.Body
-				}
-			}
-		}
-		for i, marker := range textData.Markers {
-			if i < result.Banners().Count() {
-				iT := result.Data.IndexType("Banner", i)
-				if iT >= 0 {
-					result.Data[iT].ContentT = marker.Body
+					result.Data[iT].ContentT = effect.Body
 				}
 			}
 		}

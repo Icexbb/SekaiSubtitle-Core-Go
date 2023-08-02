@@ -10,12 +10,13 @@ import (
 	"sync"
 
 	"SekaiSubtitle-Core/process"
+
 	"github.com/gorilla/mux"
 	"github.com/gorilla/websocket"
 	"gocv.io/x/gocv"
 )
 
-var AppVersion = "v2.0.230727"
+var AppVersion = "v2.0.230802"
 var TaskList = make(map[string]*process.Task)
 var TaskListMux = new(sync.RWMutex)
 var upgrader = websocket.Upgrader{}
