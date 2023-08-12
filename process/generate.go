@@ -44,79 +44,85 @@ func makeStaffBody(item StaffItem) string {
 	}
 	var staffs []StaffSort
 	if len(item.Recorder) > 0 {
-		index := 0
+		index := -1
 		for i, v := range staffs {
 			if v.Id == item.Recorder {
 				index = i
+				break
 			}
 		}
-		if index == 0 {
-			staffs[index] = StaffSort{Id: item.Recorder, Jobs: []string{"录制"}}
+		if index == -1 {
+			staffs = append(staffs, StaffSort{Id: item.Recorder, Jobs: []string{"录制"}})
 		} else {
 			staffs[index].Jobs = append(staffs[index].Jobs, "录制")
 		}
 	}
 	if len(item.Translator) > 0 {
-		index := 0
+		index := -1
 		for i, v := range staffs {
 			if v.Id == item.Translator {
 				index = i
+				break
 			}
 		}
-		if index == 0 {
-			staffs[index] = StaffSort{Id: item.Translator, Jobs: []string{"翻译"}}
+		if index == -1 {
+			staffs = append(staffs, StaffSort{Id: item.Translator, Jobs: []string{"翻译"}})
 		} else {
 			staffs[index].Jobs = append(staffs[index].Jobs, "翻译")
 		}
 	}
 	if len(item.TranslateProof) > 0 {
-		index := 0
+		index := -1
 		for i, v := range staffs {
 			if v.Id == item.TranslateProof {
 				index = i
+				break
 			}
 		}
-		if index == 0 {
-			staffs[index] = StaffSort{Id: item.TranslateProof, Jobs: []string{"校对"}}
+		if index == -1 {
+			staffs = append(staffs, StaffSort{Id: item.TranslateProof, Jobs: []string{"校对"}})
 		} else {
 			staffs[index].Jobs = append(staffs[index].Jobs, "校对")
 		}
 	}
 	if len(item.SubtitleMaker) > 0 {
-		index := 0
+		index := -1
 		for i, v := range staffs {
 			if v.Id == item.SubtitleMaker {
 				index = i
+				break
 			}
 		}
-		if index == 0 {
-			staffs[index] = StaffSort{Id: item.SubtitleMaker, Jobs: []string{"时轴"}}
+		if index == -1 {
+			staffs = append(staffs, StaffSort{Id: item.SubtitleMaker, Jobs: []string{"时轴"}})
 		} else {
 			staffs[index].Jobs = append(staffs[index].Jobs, "时轴")
 		}
 	}
 	if len(item.SubtitleProof) > 0 {
-		index := 0
+		index := -1
 		for i, v := range staffs {
 			if v.Id == item.SubtitleProof {
 				index = i
+				break
 			}
 		}
-		if index == 0 {
-			staffs[index] = StaffSort{Id: item.SubtitleProof, Jobs: []string{"轴校"}}
+		if index == -1 {
+			staffs = append(staffs, StaffSort{Id: item.SubtitleProof, Jobs: []string{"轴校"}})
 		} else {
 			staffs[index].Jobs = append(staffs[index].Jobs, "轴校")
 		}
 	}
 	if len(item.Compositor) > 0 {
-		index := 0
+		index := -1
 		for i, v := range staffs {
 			if v.Id == item.Compositor {
 				index = i
+				break
 			}
 		}
-		if index == 0 {
-			staffs[index] = StaffSort{Id: item.Compositor, Jobs: []string{"压制"}}
+		if index == -1 {
+			staffs = append(staffs, StaffSort{Id: item.Compositor, Jobs: []string{"压制"}})
 		} else {
 			staffs[index].Jobs = append(staffs[index].Jobs, "压制")
 		}
@@ -124,7 +130,7 @@ func makeStaffBody(item StaffItem) string {
 
 	var StaffStrings []string
 	for _, staff := range staffs {
-		StaffStrings = append(StaffStrings, staff.Id+"："+strings.Join(staff.Jobs, "&"))
+		StaffStrings = append(StaffStrings, strings.Join(staff.Jobs, "&")+"："+staff.Id)
 	}
 
 	var StaffString = Strip(strings.Join(StaffStrings, "\n"))
@@ -955,7 +961,9 @@ func (t *Task) Run() {
 		events = append(events, GetSubtitleArraySurrounded(dialogsEvents, "Dialog", 15)...)
 
 		vc, err := gocv.VideoCaptureFile(t.Config.VideoFile)
-		CheckErr(err)
+		if err != nil {
+			go t.Log(Log{Type: "string", Data: fmt.Sprintf("[Error] Process Failed: %s", err.Error())})
+		}
 		res := Subtitle{
 			ScriptInfo: SubtitleScriptInfo{
 				Title: filename, ScriptType: "v4.00+",
@@ -982,8 +990,9 @@ func (t *Task) Run() {
 		} else {
 			go t.Log(Log{Type: "string", Data: "[Finish] Skipped Output Because of File Exists"})
 		}
-		err = vc.Close()
-		CheckErr(err)
+		if vc.Close() != nil {
+			go t.Log(Log{Type: "string", Data: fmt.Sprintf("[Error] Process Failed: %s", err.Error())})
+		}
 	}
 	t.Processing = false
 }
