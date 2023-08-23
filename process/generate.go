@@ -218,12 +218,31 @@ func dialogBodyTyper(body string, charInterval [2]int) string {
 	for _, s := range returnChar {
 		bodyCopy = strings.ReplaceAll(bodyCopy, s, "\n")
 	}
+	t := ""
+	var bodyArr []string
+	for _, v := range bodyCopy {
+		c := string(v)
+		if c == "." {
+			if t == "" || t == "." || t == ".." {
+				t = strings.Join([]string{t, c}, "")
+				if t == "..." {
+					bodyArr = append(bodyArr, t)
+					t = ""
+				}
+			} else {
+				bodyArr = append(bodyArr, c)
+			}
+		} else {
+			bodyArr = append(bodyArr, c)
+		}
+	}
+
 	res := ""
 	nextStart := 0
 	fadeTime := charInterval[0]
 	charTime := charInterval[1]
-	for _, v := range bodyCopy {
-		c := string(v)
+	for _, v := range bodyArr {
+		c := v
 		r := ""
 		var start int
 		if fadeTime > 0 && charTime > 0 {
@@ -250,6 +269,25 @@ func dialogBodyTyperCalculator(body string, frameCount int, frameTimeMs float64,
 	for _, s := range returnChar {
 		bodyCopy = strings.ReplaceAll(bodyCopy, s, "\n")
 	}
+	t := ""
+	var bodyArr []string
+	for _, v := range bodyCopy {
+		c := string(v)
+		if c == "." {
+			if t == "" || t == "." || t == ".." {
+				t = strings.Join([]string{t, c}, "")
+				if t == "..." {
+					bodyArr = append(bodyArr, t)
+					t = ""
+				}
+			} else {
+				bodyArr = append(bodyArr, c)
+			}
+		} else {
+			bodyArr = append(bodyArr, c)
+		}
+	}
+
 	nowTime := int(frameTimeMs * float64(frameCount) * 1000.0)
 	transAlphaString := "{\\alpha&HFF&}"
 	isTransNow := false
@@ -257,8 +295,8 @@ func dialogBodyTyperCalculator(body string, frameCount int, frameTimeMs float64,
 	fadeTime := charInterval[0]
 	charTime := charInterval[1]
 	res := ""
-	for _, v := range bodyCopy {
-		c := string(v)
+	for _, v := range bodyArr {
+		c := v
 		addTrans := ""
 		charTimeNow += charTime
 		if c == "\n" {
